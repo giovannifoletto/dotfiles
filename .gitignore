@@ -1,5 +1,6 @@
 .Xauthority
 .aws
+.vim
 .azure
 .bash_aliases
 .bash_history
