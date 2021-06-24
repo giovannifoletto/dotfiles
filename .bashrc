@@ -118,3 +118,5 @@ if ! shopt -oq posix; then
     . /etc/bash_completion
   fi
 fi
+
+# bg-color of ubuntu #171421
