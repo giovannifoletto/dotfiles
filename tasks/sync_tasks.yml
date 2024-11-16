@@ -1,0 +1,17 @@
+- name: Install rsync
+  ansible.builtin.dnf5:
+    name: rsync
+    state: present
+  become: true
+  become_method: sudo
+
+- name: Syncronize Home Directory
+  ansible.posix.synchronize:
+    src: /home/{{ username }}/Documents
+    dest: /home/{{ username }}/Documents
+    rsync_opts:
+      - "--no-motd"
+      - "--exclude=.git"
+      - '--exclude=".*/"'
+  delegate_facts: true
+  delegate_to: localhost

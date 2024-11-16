@@ -1,0 +1,11 @@
+- name: Ensure .ssh exists
+  ansible.builtin.file:
+    path: /home/{{ username }}/.ssh
+    state: directory
+    mode: 0644
+
+- name: Create new system key
+  # default (4096 bits, rsa)
+  community.crypto.openssh_keypair:
+    path: /home/{{ username }}/.ssh
+

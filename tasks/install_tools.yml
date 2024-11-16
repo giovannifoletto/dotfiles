@@ -1,0 +1,319 @@
+- name: Install Ghidra
+  community.general.flatpak:
+    name: org.ghidra_sre.Ghidra
+    method: user
+    state: present
+
+- name: Update, install and configure
+  ansible.builtin.dnf5:
+    name: 
+      - zed
+      - ansible
+      - virtualbox
+      - tmux
+      - perl
+      - exiftool
+      - remmmina
+      - remmina-plugins-rdp
+      - remmina-plugins-spice
+      - remmina-plugins-vnc
+      - yara
+    state: latest
+  become: true
+  become_method: sudo
+  
+- name: Install gdb and gef plugin
+  block:
+    - name: Install prerequisite
+      ansible.builtin.dnf5:
+        name:
+          - gdb
+          - file
+          - readelf
+          - nm
+          - ps
+          - python3
+          - python3-pip
+          - curl
+          - wget
+          - perl
+          - python3-yara
+          - yara-doc
+          - wireshark
+          - zeek-core
+          - zeek-zkg
+          - john
+          - conda
+          - jq
+          - binwalk
+          - hashcat
+        state: latest
+      become: true
+      become_method: sudo
+
+    - name: Check for python version inside gdb
+      ansible.builtin.command: gdb -nx -ex 'pi print(sys.version)' -ex quit
+      register: gdb-python-version
+
+    - name: Debug python version inside gdb
+      ansible.builtin.debug:
+        var: gdb-python-version
+
+    - name: Get installation file
+      ansible.builtin.get_url: 
+        url: https://gef.blah.cat/sh
+        dest: /tmp/gef-install.sh
+
+    - name: Install gef
+      ansible.builtin.command: bash -c /tmp/get-install.sh
+
+- name: Initialize conda
+  ansible.builtin.command: conda init
+  register: this
+  failed_when: this.rc != 0
+
+# Langage specif Tools
+
+- name: Install python3 tools
+  ansible.builtin.pip:
+    name: 
+      - pwntools
+      - requests
+      - beautifulsoup4
+      - argparse
+      - numpy
+      - struct
+      - pycryptodome
+      - keystone-engine
+      - capstone
+      - filebytes
+      - ropper
+
+- name: Go tools
+  ansible.builtin.command: go install {{ go_package }}
+  register: this
+  failed_when: this.rc != 0
+  loop:
+    - github.com/ffuf/ffuf/v2@latest
+    - github.com/mikefarah/yq/v3@latest 
+    - github.com/tomnomnom/gron@latest
+    - github.com/zyedidia/eget@latest
+  loop_control:
+    loop_var: go_package
+    label: Installing {{ go_package }} via golang package manager
+
+- name: Installing Perl tools
+  ansible.builtin.command: gem install {{ gem_package }}
+  register: this
+  failed_when: this.rc != 0
+  loop:
+    - zsteg
+    - one_gadget
+  loop_control:
+    loop_var: gem_package
+    label: Installing {{ gem_package }} via gem package manager
+
+- name: Install ngrok
+  block:
+  - name: Get tar file
+    ansible.builtin.get_url:
+      url: https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.tgz
+      dest: /tmp/
+  
+  - name: Unzip tar file
+    ansible.builtin.unarchive:
+      src: /tmp/ngrok-v3-stable-linux-amd64.tgz
+      dest: /usr/local/bin
+    become: true
+    become_method: sudo
+
+- name: Install volatility
+  block:
+    - name: Prerequisite Dstorm3
+      ansible.builtin.pip:
+        name:
+          - dstorm3
+          - pillow
+          - openpyxl
+          - ujson
+           
+    - name: Git clone repository
+      ansible.builtin.git:
+        repo: https://github.com/volatilityfoundation/volatility.git
+        dest: /opt/volatility
+      become: true
+      become_method: sudo
+    
+    - name: Create static link to volatility in /local/bin
+      ansible.builtin.file:
+        src: /opt/volatility/vol.py
+        dest: /usr/local/bin/vol
+        state: link
+        mode: '0777'
+
+- name: Install snyk
+  ansible.builtin.get_url:
+    url: https://downloads.snyk.io/cli/stable/snyk-linux
+    dest: /usr/local/bin
+    mode: '0766'
+
+- name: Install powershell
+  block:
+    - name: Add microsoft repo
+      ansible.builtin.get_url:
+        url: https://packages.microsoft.com/fedora/{{ ansible_distribution_major_version }}/prod/config.repo
+        dest: /etc/yum.repos.d/microsoft.repo
+        state: touch
+    
+    - name: DNF update
+      ansible.builtin.command: dnf update -y
+      register: this
+      become: true
+      become_method: sudo
+      failed_when: this.rc != 0
+    
+    - name: Install powershell
+      ansible.builtin.dnf5:
+        name: powershell
+        state: present
+
+- name: Clone SecLists repo
+  ansible.builtin.git:
+    repo: https://github.com/danielmiessler/SecLists.git
+    depth: 1
+    dest: /opt/SecLists
+
+- name: Clone sqlmap repo
+  ansible.builtin.git:
+    repo: https://github.com/sqlmapproject/sqlmap.git
+    depth: 1
+    dest: /opt/sqlmap-dev
+
+- name: Install Stegsolve.jar
+  block:
+    - name: Download Stegsolve.jar
+      ansible.builtin.get_url:
+        url: www.caesum.com/handbook/Stegsolve.jar
+        dest: /opt/Stegsolve.jar
+        mode: '0755'
+    
+    - name: Create link to it from /usr/local/bin
+      ansible.builtin.file:
+        src: /opt/Stegsolve.jar
+        dest: /usr/local/bin/stegsolve
+        owner: {{ username }}
+        state: link
+
+# this is probably nonsense and will probably fail
+# Limit the action to the two env to create, and then leave the installation of the packages
+# to manual actiions
+# To make these envs functional, follow the README.md
+- name: Create Angr and z3 conda env
+  block:
+
+    - name: Conda initialization and env creation
+      ansible.builtin.command: '{{ command }}'
+      register: this
+      failed_when: this.rc != 0
+      loop:
+        - conda init
+        - conda create -n angr python=3.10 -y
+        - conda create -n z3 -y
+      loop_control:
+        label: Running {{ command }}.
+        loop_var: command
+
+- name: Install apktools
+  block:
+    - name: Download apktools commodity script
+      ansible.builtin.get_url:
+        url: https://raw.githubusercontent.com/iBotPeaches/Apktool/master/scripts/linux/apktool
+        dest: /usr/local/bin/apktool
+        mode: '0755'
+      become: true
+      become_method: sudo
+    
+    - name: Download apktools jar file
+      ansible.builtin.get_url:
+        url: https://bitbucket.org/iBotPeaches/apktool/downloads/apktool_{{ apktool_version }}.jar
+        dest: /usr/local/bin/apktools_{{ apktool_version }}.jar
+        mode: '0755'
+
+- name: Install BurpSuite
+  block:
+    - name: Get commodity installation script
+      ansible.builtin.get_url:
+        url: https://portswigger-cdn.net/burp/releases/download?product=community&version={{ burp_version }}&type=Linux
+        dest: /tmp/install-burp.sh
+        mode: '0755'
+    
+    - name: Execute script
+      ansible.builtin.command: bash -c /tmp/install-burp.sh
+      register: this
+      failed_when: this.rc != 0
+    
+- name: Install commix
+  tags: optional
+  block:
+    - name: Clone Github repo
+      ansible.builtin.git:
+        repo: https://github.com/commixproject/commix.git
+        dest: /opt/commix
+        depth: 1
+    
+    - name: Make symlink
+      ansible.builtin.file:
+        src: /opt/commix/commix.py
+        dest: /usr/local/bin/commix.py
+        state: link
+
+- name: Install featherduster
+  tags: optional
+  block:
+    - name: Clone Github repo
+      ansible.builtin.git:
+        repo: https://github.com/nccgroup/featherduster
+        dest: /opt/featherduster
+        depth: 1
+    
+    - name: Create wrapper file
+      ansible.builtin.file:
+        path: /usr/local/bin/featherduster
+        state: touch
+    
+    - name: Write wrapper around it
+      ansible.builtin.lineinfile:
+        path: /usr/local/bin/featherduster
+        line: >-
+          #!/bin/sh
+          exec python $(realpath ../featherduster/featherduster.py) "\$@"
+        state: present
+
+- name: JDGui - Java Decompiler
+  tags: optional
+  block:
+    - name: Download JDGui
+      ansible.builtin.get_url:
+        url: https://github.com/java-decompiler/jd-gui/releases/download/v1.4.0/jd-gui-{{ jd_gui_version }}.jar
+        dest: /opt/jd-gui-1.4.0.jar
+        mode: '0755'
+    
+    - name: Add wrapper
+      ansible.builtin.file:
+        dest: /usr/local/bin/jd-gui
+        mode: touch
+    
+    - name: Insert content of the wrapper in the script
+      ansible.builtin.lineinfile:
+        line: >-
+          #/bin/bash -e
+          java -jar /opt/jd-gui-{{ jd_gui_version }}.jar "\$@"
+
+- name: Install Ropper
+  block:
+    - name: Clone Github repo
+      ansible.builtin.git:
+        repo: https://github.com/sashs/Ropper.git
+        dest: /opt/ropper
+  
+

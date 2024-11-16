@@ -1,0 +1,23 @@
+- name: Install golang from official repository
+  ansible.builtin.dnf5:
+    name:
+      - golang
+      - rustup
+    state: present
+  become: true
+  become_method: sudo
+
+- name: Make go/bin home directory
+  ansible.builtin.file:
+    path: "{{ lookup('env', 'HOME') }}/go"
+    state: directory
+    mode: '0755'
+
+- name: Insert export GOPATH inside zsh
+  ansible.builtin.lineinfile:
+    path: /home/{{ username }}/.zshrc
+    line: export GOPATH=$HOME/go
+    state: present
+
+- name: Install npm
+  

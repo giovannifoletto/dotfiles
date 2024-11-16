@@ -1,0 +1,38 @@
+---
+
+- name: Check that packages are not present
+  ansible.builtin.dnf5:
+    name:
+      - docker
+      - docker-client
+      - docker-client-latest
+      - docker-common
+      - docker-latest
+      - docker-latest-logrotate
+      - docker-logrotate
+      - docker-selinux
+      - docker-engine-selinux
+      - docker-engine
+
+- name: Install preparatory packages
+  become: true
+  become_method: sudo
+  ansible.builtin.dnf5:
+    - dnf-plugins-core
+
+- name: Install new repo
+  ansible.builtin.shell: "dnf-3 config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo"
+  become: true
+  become_method: sudo
+
+- name: Install docker and its dependency
+  ansible.builtin.dnf5:
+    name:
+    - docker-ce
+    - docker-ce-cli
+    - containerd.io
+    - docker-buildx-plugin
+    - docker-compose-plugin
+    state: latest
+  become: true
+  become_method: sudo
