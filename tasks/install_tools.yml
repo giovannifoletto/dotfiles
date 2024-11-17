@@ -24,7 +24,7 @@
   
 - name: Install gdb and gef plugin
   block:
-    - name: Install prerequisite
+    - name: Install OS packages
       ansible.builtin.dnf5:
         name:
           - gdb
@@ -47,6 +47,16 @@
           - jq
           - binwalk
           - hashcat
+          - java-21-openjdk
+          - sonic-visualizer
+        state: latest
+      become: true
+      become_method: sudo
+
+    - name: Install optinal packages
+      ansible.builtin.dnf5:
+        name:
+          - valgrind
         state: latest
       become: true
       become_method: sudo
@@ -88,6 +98,12 @@
       - capstone
       - filebytes
       - ropper
+
+- name: Install optional python packages
+  tags: optional
+  ansible.builtin.pip:
+    name:
+      - webgrep-tool
 
 - name: Go tools
   ansible.builtin.command: go install {{ go_package }}
@@ -308,12 +324,3 @@
         line: >-
           #/bin/bash -e
           java -jar /opt/jd-gui-{{ jd_gui_version }}.jar "\$@"
-
-- name: Install Ropper
-  block:
-    - name: Clone Github repo
-      ansible.builtin.git:
-        repo: https://github.com/sashs/Ropper.git
-        dest: /opt/ropper
-  
-

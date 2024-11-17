@@ -8,6 +8,8 @@
     # to test better, deactivated
     # - migration => this is maybe better, organize all tasks inside this to make a backup and then sync locally or recover from backup
     # - optional => install script/programs that are optional
+    # - optional-tailscale => install tailscale also
+    # - todo => not working, to exclude them from execution
     borg_username: borg
     borg_server: 192.168.1.1
     borg_repo_location: /data/{{ username }}-repo
@@ -29,18 +31,22 @@
   - name: ZSH/ZIM installation
     ansible.builtin.import_tasks: tasks/install_zim.yml
 
-  - name: Install VSCODE
-    ansible.builtin.import_tasks: tasks/install_vscode.yml
-
-  - name: Install Docker
-    ansible.builtin.import_tasks: tasks/install_docker.yml
+  - name: Install misc software
+    ansible.builtin.import_tasks: tasks/misc.yml
 
   - name: Install go and rust toolchain
     ansible.builtin.import_tasks: tasks/install_toolchain.yml
   
   - name: Install security tools
-    ansible.builtin.import_tasks: tasks/install_tools.yml
+    ansible.builtin.import_tasks: tasks/install_tools.yml  
   
+  - name: Install cloud tools
+    ansible.builtin.import_tasks: tasks/cloud_tools.yml
+  
+  - name: Setup SSH and GPG
+    ansible.builtin.import_tasks: tasks/crypto_setup.yml
+    tags: todo
+
   - name: Synchronization tasks
     ansible.builtin.import_tasks: tasks/sync_tasks.yml
     tags: sync

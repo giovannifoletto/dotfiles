@@ -1,0 +1,121 @@
+- name: Installing kubectl
+  block:
+    - name: Get current tools' version
+      ansible.builtin.get_url:
+        url: https://dl.k8s.io/release/stable.txt
+      register: kubectl-version
+    
+    - name: Download kubectl
+      ansible.builtin.get_url:
+        url: https://dl.k8s.io/release/{{ kubectl-version }}/bin/linux/amd64/kubectl
+        dest: /tmp/kubectl
+    
+    - name: Validation
+      ansible.builtin.get_url:
+        url: https://dl.k8s.io/release/{{ kubectl-version }}/bin/linux/amd64/kubectl.sha256
+        dest: /tmp/kubectl.sha256
+    
+    - name: Read the sha256 file checksum
+      ansible.builtin.slurp:
+        src: /tmp/kubectl.sha256
+      register: kube-sha256-content
+      
+    - name: Calculate sha256 of the file
+      ansible.builtin.stat:
+        path: /tmp/kubectl
+        checksum_algorithm: sha256
+      register: kube-hash-check
+    
+    - name: Fail if checksum do not coincide
+      ansible.builtin.fail:
+        msg: "Kubernetes checksum do not coicide. Failing."ù
+      when: st.stat.hash != {{ kube-sha256-content | json_query('.content') | b64decode }}
+    
+    - name: Install kubectl
+      ansible.builtin.file:
+        src: /tmp/kubectl
+        dest: /usr/local/bin/kubectl
+        mode: '0755'
+      become: true
+      become_method: sudo
+    
+    - name: Get autocompletion
+      ansible.builtin.command: kubectl completion zsh
+      register: zsh-completion
+    
+    - name: Create completion file
+      ansible.builtin.copy:
+        dest: /home/{{ username }}/.kubernetes-completion.sh
+        content: '{{ zsh-completion | json_query(".content") | b64decode }}'
+    
+    - name: Add source of the completion file to .zshrc
+      ansible.builtin.lineinfile:
+        path: /home/{{ username }}/.zshrc
+        line: source ~/.kubernetes-completion.sh
+        state: present
+
+- name: Install minikube
+  block:
+    - name: Download executable
+      ansible.builtin.get_url:
+        url: https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+        dest: /tmp/minikube
+
+    - name: Move to /usr/local/bin
+      ansible.builtin.file:
+        src: /tmp/minikube
+        dest: /usr/local/bin/minikube 
+
+- name: Install helm
+  block:
+    - name: Install helm from packages
+      ansible.builtin.dnf5:
+        name: helm
+        state: present
+      become: true
+      become_method: sudo
+
+    - name: Get autocompletion
+      ansible.builtin.command: helm completion zsh
+      register: helm-completion
+    
+    - name: Create completion file
+      ansible.builtin.copy:
+        dest: /home/{{ username }}/.helm-completion.sh
+        content: '{{ helm-completion | json_query(".content") | b64decode }}'
+    
+    - name: Add source of the completion file to .zshrc
+      ansible.builtin.lineinfile:
+        path: /home/{{ username }}/.zshrc
+        line: source ~/.helm-completion.sh
+        state: present 
+
+- name: Install aws
+  # curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+  # unzip awscliv2.zip
+  # sudo ./aws/install
+  tags: todo
+  block:
+    - name: Get executable zip
+      ansible.builtin.get_url:
+        url: https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip
+        dest: /tmp/awscliv2.zip
+        
+    - name: Unarchive the package
+      ansible.builtin.unarchive:
+        src: /tmp/awscliv2.zip
+        dest: /tmp/aws
+
+- name: Install terraform and vagrant
+  block:
+    - name: Add hashicorp repo
+      ansible.builtin.get_url:
+        url: https://rpm.releases.hashicorp.com/fedora/hashicorp.repo
+        dest: /etc/yum.repos.d/hashicorp.repo
+    
+    - name: Install terraform
+      ansible.builtin.dnf5:
+        name: 
+          - terraform
+          - vagrant
+        state: present

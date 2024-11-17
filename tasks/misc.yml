@@ -1,3 +1,84 @@
 # Openconnect, openvpn, wireguard, google-chrome
+- name: Install miscellaneus packages (openvpn, wireguard, google-chrome)
+  ansible.builtin.dnf5:
+    name:
+      - openvpn
+      - wireguard-tools
+      - google-chrome-stable
+      - btrfs-assistant
+      - curl
+      - wget
+    state: present
+  become: true
+  become_method: sudo
 
-# btrfs-assistant.x86_64
+- name: Optional tailscale
+  tags: optional-tailscale
+  ansible.builtin.dnf5:
+    name:
+      - tailscale
+    state: present
+    become: true
+    become_method: sudo
+
+- name: Install VsCode
+  block:
+    - name: Install vscode gpg
+      ansible.builtin.rpm_key:
+        state: present
+        key: https://packages.microsoft.com/keys/microsoft.asc
+      become: true
+      become_method: sudo
+
+    - name: Update VsCode repo file
+      ansible.builtin.template:
+        src: 'templates/vscode.j2'
+        dest: /etc/yum.repos.d/vscode.repo
+      become: true
+      become_method: sudo
+
+    - name: Install Packages
+      ansible.builtin.dnf5:
+        name: code
+        state: latest
+      become: true
+      become_method: sudo
+
+- name: Install docker
+  block:
+    - name: Check that packages are not present
+      ansible.builtin.dnf5:
+        name:
+          - docker
+          - docker-client
+          - docker-client-latest
+          - docker-common
+          - docker-latest
+          - docker-latest-logrotate
+          - docker-logrotate
+          - docker-selinux
+          - docker-engine-selinux
+          - docker-engine
+
+    - name: Install preparatory packages
+      become: true
+      become_method: sudo
+      ansible.builtin.dnf5:
+        - dnf-plugins-core
+
+    - name: Install new repo
+      ansible.builtin.shell: "dnf-3 config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo"
+      become: true
+      become_method: sudo
+
+    - name: Install docker and its dependency
+      ansible.builtin.dnf5:
+        name:
+        - docker-ce
+        - docker-ce-cli
+        - containerd.io
+        - docker-buildx-plugin
+        - docker-compose-plugin
+        state: latest
+      become: true
+      become_method: sudo

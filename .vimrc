@@ -1,116 +1,77 @@
-" template from github.com/tomnomnom/dotfiles
-" Vundle
-filetype off
+" Vim configuration file "                                                                                                                                                                                                                    
+                                                                                                                                                                                                                                              
+" enable mouse support "                                                                                                                                                                                                                      
+set mouse=a                                                                                                                                                                                                                                   
+                                                                                                                                                                                                                                              
+" enable syntax "                                                                                                                                                                                                                             
+syntax on                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                              
+" enable line numbers "                                                                                                                                                                                                                       
+set number                                                                                                                                                                                                                                    
+                                                                                                                                                                                                                                              
+" highlight current line "                                                                                                                                                                                                                    
+set cursorline                                                                                                                                                                                                                                
+:highlight Cursorline cterm=bold ctermbg=black                                                                                                                                                                                                
+" use imap to remap ESC
 
-let g:vundle_default_git_proto = 'git'
-set rtp+=~/.vim/bundle/Vundle.vim
-call vundle#begin()
+imap jk <ESC>
 
-" Bundles
-Plugin 'VundleVim/Vundle.vim'
-Plugin 'tpope/vim-fugitive'
-Plugin 'sjl/gundo.vim'
-Plugin 'bling/vim-airline'
-Plugin 'vim-airline/vim-airline-themes'
-Plugin 'altercation/vim-colors-solarized'
-Plugin 'TomNomNom/xoria256.vim'
-
-call vundle#end()
-
-" No error Sound
-set noerrorbells
-set novisualbell
-
-" History
-set history=50
-
-" Display
-set ls=2
-set showmode
-set showcmd
-set modeline
-set ruler
-set title
-set nu
-set number
-
-" Line wrapping
-set nowrap
-set linebreak
-set showbreak=▹
-
-" Auto in\dent what you can
+" enable highlight search pattern "                                                                                                                                                                                                           
+set hlsearch                                                                                                                                                                                                                                  
+                                                                                                                                                                                                                                              
+" enable smartcase search sensitivity "                                                                                                                                                                                                       
+set ignorecase                                                                                                                                                                                                                                
+set smartcase                                                                                                                                                                                                                                 
+                                                                                                                                                                                                                                              
+" Indentation using spaces "                                                                                                                                                                                                                  
+" tabstop:      width of tab character                                                                                                                                                                                                        
+" softtabstop:  fine tunes the amount of whitespace to be added                                                                                                                                                                               
+" shiftwidth:   determines the amount of whitespace to add in normal mode
+" expandtab:    when on use space instead of tab
+" textwidth:    text wrap width
+" autoindent:   autoindent in new line
+set tabstop     =4
+set softtabstop =4
+set shiftwidth  =4
+set textwidth   =79
+set expandtab
 set autoindent
 
-" Searching
-set ignorecase
-set smartcase
-set gdefault
-set hlsearch
+" show the matching part of pairs [] {} and () "
 set showmatch
 
-" Enable jumping into files in a search buffer
-set hidden 
+" remove trailing whitespace from Python and Fortran files "
+autocmd BufWritePre *.py :%s/\s\+$//e
+autocmd BufWritePre *.f90 :%s/\s\+$//e
+autocmd BufWritePre *.f95 :%s/\s\+$//e
+autocmd BufWritePre *.for :%s/\s\+$//e
 
-" Make backspace a bit nicer
-set backspace=eol,start,indent
-
-" Indentation
-set shiftwidth=4
-set tabstop=4
-set softtabstop=4
-set shiftround
-set expandtab
-
-" Disable mouse
-set mouse=
-
-" Colorscheme
-if &t_Co == 256
-    try
-        color xoria256
-    catch /^Vim\%((\a\+)\)\=:E185/
-        " Oh well
-    endtry
+" enable color themes "
+if !has('gui_running')
+        set t_Co=256
 endif
+" enable true colors support "
+set termguicolors
+colorscheme desert
 
-" https://www.techrepublic.com/blog/linux-and-open-source/create-custom-keybindings-in-vim/
+set wildmenu
 
-" Set CTRL-A to <esc> command 
-imap <C-a> <esc>
+set wildmode=list:longest
+set wildignore=*.docx,*.jpg,*.png,*.gif,*.pdf,*.pyc,*.exe,*.flv,*.img,*.xlsx
 
-"TRL-C to copy (visual mode)
+" STATUS LINE ------------------------------------------------------------ {{{
 
-"vmap <C-c> y
+" Clear status line when vimrc is reloaded.
+set statusline=
 
-" CTRL-X to cut (visual mode)
+" Status line left side.
+set statusline+=\ %F\ %M\ %Y\ %R
 
-"vmap <C-x> x
+" Use a divider to separate the left side from the right side.
+set statusline+=%=
 
-"CTRL-V to paste (insert mode)
+" Status line right side.
+set statusline+=\ ascii:\ %b\ hex:\ 0x%B\ row:\ %l\ col:\ %c\ percent:\ %p%%
 
-"imap <C-v> <esc>
-
-" Set up from https://www.keycdn.com/blog/vim-commands
-
-" go to bottom file and line: https://www.cyberciti.biz/faq/howto-unix-linux-vi-vim-jump-to-end-of-file/
-" not working -> Goal: reach the EOF and then fo to the end of line
-"cmap <B> <A-$>
-
-"Example of .vimrc on vimwiki: https://vim.fandom.com/wiki/Example_vimrc
-" Split and move the view of vim: https://www.sourceallies.com/2009/11/vim-splits-an-introduction/
-" Text writing:
-"   -  i : insert  first
-"   - I  : insert later
-"   - o  : insert a line later
-"   - O  : insert above current line
-"   - r  : Replace single character under cursor
-"   - R  : Replace char until <esc> pressed
-" other userful char: https://www.cs.colostate.edu/helpdocs/vi.htmlhttps://www.cs.colostate.edu/helpdocs/vi.html
-" Searching into a file: 
-" - search text:
-"   - '/string' : search forward for occurrence
-"   - '?string' : search backward for occurrence
-"   - n         : move to the next occurrence
-"   - N         : move to the previus occurrence
-
+" Show the status on the second to last line.
+set laststatus=2

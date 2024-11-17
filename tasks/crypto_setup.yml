@@ -8,4 +8,3 @@
   # default (4096 bits, rsa)
   community.crypto.openssh_keypair:
     path: /home/{{ username }}/.ssh
-

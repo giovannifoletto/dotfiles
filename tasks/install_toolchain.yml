@@ -3,6 +3,7 @@
     name:
       - golang
       - rustup
+      - nodejs-npm
     state: present
   become: true
   become_method: sudo
@@ -18,6 +19,3 @@
     path: /home/{{ username }}/.zshrc
     line: export GOPATH=$HOME/go
     state: present
-
-- name: Install npm
-  
