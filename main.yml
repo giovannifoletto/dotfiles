@@ -1,5 +1,5 @@
 - name: "Setup computer"
-  hosts: localhost 
+  hosts: workstation 
   vars:
     username: giovannifoletto
     hostname: fedora
@@ -10,6 +10,8 @@
     # - optional => install script/programs that are optional
     # - optional-tailscale => install tailscale also
     # - todo => not working, to exclude them from execution
+    # - docker-installed => to skip docker installation, if there is already a docker installation on the system
+    # during testing I added a lot of script, because some things do not work.
     borg_username: borg
     borg_server: 192.168.1.1
     borg_repo_location: /data/{{ username }}-repo
@@ -19,7 +21,7 @@
   tasks:
 
   - name: Update/Upgrade
-    ansible.builtin.dnf5:
+    ansible.builtin.dnf:
       name: "*"
       state: latest
     become: yes
@@ -54,4 +56,3 @@
   - name: Setup borgbackup and borgmatic
     ansible.builtin.import_tasks: tasks/borg_backup.yml
     tags: sync
-  

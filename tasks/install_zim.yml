@@ -1,28 +1,37 @@
 ---
 - name: Get ZSH
-  become: true
-  become_method: sudo
-  ansible.builtin.dnf5:
+  tags: alreadyzim
+  ansible.builtin.dnf:
     name: 
     - curl
     - wget
     - zsh
     state: present
+  become: true
+  become_method: sudo
 
 - name: Install ZIM
   ansible.builtin.shell: "curl -fsSL https://raw.githubusercontent.com/zimfw/install/master/install.zsh | zsh"
+  tags: alreadyzim
 
 - name: Reconfigure ZIM
+  tags: alreadyzim
   ansible.builtin.replace:
-    path: '/home/{{username}}/.zimrc'
+    path: /home/{{ username }}/.zimrc
     regexp: "zmodule asciiship"
     replace: "zmodule prompt-pwd\nzmodule gitster"
 
 - name: Install new packages for ZIM
-  ansible.builtin.shell: "zimfw install"
+  tags: alreadyzim
+  ansible.builtin.shell: zimfw install
+  args:
+    executable: /bin/zsh
 
 - name: Update/Upgrade ZIM
-  ansible.builtin.shell: "zimfw upgrade"
+  tags: alreadyzim
+  ansible.builtin.shell: zimfw upgrade
+  args:
+    executable: /bin/zsh
 
 - name: Update user
   become: true
@@ -32,5 +41,13 @@
     shell: /bin/zsh
 
 # download font
-# - name: Install Jetbrains Font
-  
+- name: Install Jetbrains Font
+  tags: todo
+  block:
+    - name: Download font zip
+      ansible.builtin.get_url:
+        url: https://github.com/ryanoasis/nerd-fonts/releases/download/v3.2.1/Hack.zip
+        dest: /home/{{ username }}/Downloads/hacks.zip
+
+    # - name: Unzip the fonts
+    #   ansible.builtin.unarchive:

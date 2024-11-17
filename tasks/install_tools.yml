@@ -1,62 +1,148 @@
+- name: Add the flathub flatpak repository remote to the user installation
+  community.general.flatpak_remote:
+    name: flathub
+    state: present
+    flatpakrepo_url: https://dl.flathub.org/repo/flathub.flatpakrepo
+    method: user
+
 - name: Install Ghidra
   community.general.flatpak:
     name: org.ghidra_sre.Ghidra
     method: user
     state: present
 
-- name: Update, install and configure
-  ansible.builtin.dnf5:
+- name: Virtualbox installation
+  tags: todo
+  block:
+    - name: Install Prerequisite
+      ansible.builtin.dnf:
+        name: 
+          - '@development-tools'
+          - kernel-headers
+          - kernel-devel
+          - dkms
+      become: true
+      become_method: sudo
+
+    - name: Install new repo
+      ansible.builtin.template:
+        src: templates/virtualbox.j2
+        dest: /etc/yum.repos.d/virtualbox.repo
+        mode: '0644'
+      become: true
+      become_method: sudo
+
+    - name: Update repositories
+      ansible.builtin.dnf:
+        name: '*'
+        state: latest
+      become: true
+      become_method: sudo
+
+    - name: Install virtualbox
+      ansible.builtin.dnf:
+        name: VirtualBox-7.1
+        state: present
+      become: true
+      become_method: sudo
+
+    - name: Get virtualbox version
+      ansible.builtin.command: vboxmanage -v | cut -dr -f1
+      register: vbox_version
+
+    - name: Download extension pack
+      ansible.builtin.get_url:
+        url: https://download.virtualbox.org/virtualbox/{{ vbox_version | json_query('.content') | b64decode }}/Oracle_VirtualBox_Extension_Pack-7.1.0.vbox-extpack
+        dest: /tmp/Oracle_VirtualBox_Extension_Pack-7.1.0.vbox-extpack
+    
+    - name: Update extensionbox
+      ansible.builtin.command: yes | vboxmanage extpack install /tmp/Oracle_VirtualBox_Extension_Pack-7.1.0.vbox-extpack
+      become: true
+      become_method: sudo
+  
+    - name: Add user to vboxuser
+      ansible.builtin.user:
+        name: '{{ username }}'
+        group: vboxuser
+        append: yes
+      become: true
+      become_method: sudo
+
+- name: ZED installation
+  block:
+    - name: Download script
+      ansible.builtin.get_url:
+        url: https://zed.dev/install.sh
+        dest: /tmp/install-zed.sh
+        mode: '0755'
+
+    # - name: Get zed version
+    #   ansible.builtin.shell:
+    #     cmd: zed --version
+    #   args:
+    #     executable: /bin/zsh
+    #   register: zed_version
+
+    # - debug:
+    #     vars: zed_version
+
+    - name: Execute zed instation script
+      ansible.builtin.shell: bash -c /tmp/install-zed.sh
+      when: zed_version | json_query('.content') | b64decode is None
+      tags: zed_already_installed
+       
+
+- name: Update, install and configure packages
+  ansible.builtin.dnf:
     name: 
-      - zed
       - ansible
-      - virtualbox
       - tmux
       - perl
       - exiftool
-      - remmmina
-      - remmina-plugins-rdp
-      - remmina-plugins-spice
-      - remmina-plugins-vnc
+      # - remmmina
       - yara
+      # - sonic-visualizer
+      - python3
+      - python3-pip
+      - curl
+      - wget
+      - perl
+      - python3-yara
+      - yara-doc
+      - wireshark
+      - zeek-core
+      - zeek-zkg
+      - john
+      - conda
+      - jq
+      - binwalk
+      - hashcat
+      - java-21-openjdk
+      - yq
+      - gem
     state: latest
   become: true
   become_method: sudo
   
+- name: Install optional packages
+  ansible.builtin.dnf:
+    name:
+      - valgrind
+    state: latest
+  become: true
+  become_method: sudo
+  tags: optional
+
 - name: Install gdb and gef plugin
   block:
     - name: Install OS packages
-      ansible.builtin.dnf5:
+      ansible.builtin.dnf:
         name:
           - gdb
           - file
           - readelf
           - nm
           - ps
-          - python3
-          - python3-pip
-          - curl
-          - wget
-          - perl
-          - python3-yara
-          - yara-doc
-          - wireshark
-          - zeek-core
-          - zeek-zkg
-          - john
-          - conda
-          - jq
-          - binwalk
-          - hashcat
-          - java-21-openjdk
-          - sonic-visualizer
-        state: latest
-      become: true
-      become_method: sudo
-
-    - name: Install optinal packages
-      ansible.builtin.dnf5:
-        name:
-          - valgrind
         state: latest
       become: true
       become_method: sudo
@@ -73,14 +159,16 @@
       ansible.builtin.get_url: 
         url: https://gef.blah.cat/sh
         dest: /tmp/gef-install.sh
+        mode: '0755'
 
     - name: Install gef
-      ansible.builtin.command: bash -c /tmp/get-install.sh
+      ansible.builtin.shell: zsh -c /tmp/gef-install.sh
 
 - name: Initialize conda
   ansible.builtin.command: conda init
   register: this
   failed_when: this.rc != 0
+  tags: not_working
 
 # Langage specif Tools
 
@@ -92,7 +180,7 @@
       - beautifulsoup4
       - argparse
       - numpy
-      - struct
+      # - struct # at the time of running this cannot compile, is not available from python3.13
       - pycryptodome
       - keystone-engine
       - capstone
@@ -109,14 +197,15 @@
   ansible.builtin.command: go install {{ go_package }}
   register: this
   failed_when: this.rc != 0
+  changed_when: this.rc == 0 and this.stdout is not None
   loop:
     - github.com/ffuf/ffuf/v2@latest
-    - github.com/mikefarah/yq/v3@latest 
     - github.com/tomnomnom/gron@latest
     - github.com/zyedidia/eget@latest
   loop_control:
     loop_var: go_package
     label: Installing {{ go_package }} via golang package manager
+  tags: go_tools_to_install
 
 - name: Installing Perl tools
   ansible.builtin.command: gem install {{ gem_package }}
@@ -130,35 +219,38 @@
     label: Installing {{ gem_package }} via gem package manager
 
 - name: Install ngrok
+  tags: not_working
   block:
   - name: Get tar file
     ansible.builtin.get_url:
       url: https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.tgz
-      dest: /tmp/
+      dest: /tmp/ngrok-v3-stable-linux-amd64.tar.gz
+      mode: '0777'
   
   - name: Unzip tar file
     ansible.builtin.unarchive:
-      src: /tmp/ngrok-v3-stable-linux-amd64.tgz
-      dest: /usr/local/bin
+      src: /tmp/ngrok-v3-stable-linux-amd64.tar.gz
+      dest: /usr/local/bin/ngrok
     become: true
     become_method: sudo
 
 - name: Install volatility
   block:
-    - name: Prerequisite Dstorm3
+    - name: Prerequisite
       ansible.builtin.pip:
         name:
-          - dstorm3
+          # - dstorm3
           - pillow
           - openpyxl
           - ujson
            
-    - name: Git clone repository
-      ansible.builtin.git:
-        repo: https://github.com/volatilityfoundation/volatility.git
-        dest: /opt/volatility
-      become: true
-      become_method: sudo
+    # - name: Git clone repository
+    #   ansible.builtin.git:
+    #     repo: https://github.com/volatilityfoundation/volatility.git
+    #     dest: /opt/volatility
+    #     depth: 1
+    #   become: true
+    #   become_method: sudo
     
     - name: Create static link to volatility in /local/bin
       ansible.builtin.file:
@@ -166,12 +258,16 @@
         dest: /usr/local/bin/vol
         state: link
         mode: '0777'
+      become: true
+      become_method: sudo
 
 - name: Install snyk
   ansible.builtin.get_url:
     url: https://downloads.snyk.io/cli/stable/snyk-linux
-    dest: /usr/local/bin
+    dest: /usr/local/bin/snyk
     mode: '0766'
+  become: true
+  become_method: sudo
 
 - name: Install powershell
   block:
@@ -179,39 +275,50 @@
       ansible.builtin.get_url:
         url: https://packages.microsoft.com/fedora/{{ ansible_distribution_major_version }}/prod/config.repo
         dest: /etc/yum.repos.d/microsoft.repo
-        state: touch
+        mode: '0644'
+      become: true
+      become_method: sudo
     
     - name: DNF update
       ansible.builtin.command: dnf update -y
       register: this
+      failed_when: this.rc != 0
       become: true
       become_method: sudo
-      failed_when: this.rc != 0
     
-    - name: Install powershell
-      ansible.builtin.dnf5:
-        name: powershell
-        state: present
+    # - name: Install powershell
+    #   ansible.builtin.dnf:
+    #     name: powershell
+    #     state: present
+    #   become: true
+    #   become_method: sudo
 
 - name: Clone SecLists repo
   ansible.builtin.git:
     repo: https://github.com/danielmiessler/SecLists.git
     depth: 1
     dest: /opt/SecLists
+  become: true
+  become_method: sudo
 
 - name: Clone sqlmap repo
   ansible.builtin.git:
     repo: https://github.com/sqlmapproject/sqlmap.git
     depth: 1
     dest: /opt/sqlmap-dev
+  become: true
+  become_method: sudo
 
 - name: Install Stegsolve.jar
+  tags: not_working
   block:
     - name: Download Stegsolve.jar
       ansible.builtin.get_url:
-        url: www.caesum.com/handbook/Stegsolve.jar
+        url: https://www.caesum.com/handbook/Stegsolve.jar
         dest: /opt/Stegsolve.jar
         mode: '0755'
+      become: true
+      become_method: sudo
     
     - name: Create link to it from /usr/local/bin
       ansible.builtin.file:
@@ -219,14 +326,16 @@
         dest: /usr/local/bin/stegsolve
         owner: '{{ username }}'
         state: link
+      become: true
+      become_method: sudo
 
 # this is probably nonsense and will probably fail
 # Limit the action to the two env to create, and then leave the installation of the packages
 # to manual actiions
 # To make these envs functional, follow the README.md
 - name: Create Angr and z3 conda env
+  tags: not_working
   block:
-
     - name: Conda initialization and env creation
       ansible.builtin.command: '{{ command }}'
       register: this
@@ -254,6 +363,8 @@
         url: https://bitbucket.org/iBotPeaches/apktool/downloads/apktool_{{ apktool_version }}.jar
         dest: /usr/local/bin/apktools_{{ apktool_version }}.jar
         mode: '0755'
+      become: true
+      become_method: sudo
 
 - name: Install BurpSuite
   block:
@@ -262,11 +373,11 @@
         url: https://portswigger-cdn.net/burp/releases/download?product=community&version={{ burp_version }}&type=Linux
         dest: /tmp/install-burp.sh
         mode: '0755'
-    
-    - name: Execute script
-      ansible.builtin.command: bash -c /tmp/install-burp.sh
-      register: this
-      failed_when: this.rc != 0
+    # cannot do that, is a interactive installation this
+    # - name: Execute script
+    #   ansible.builtin.command: bash -c /tmp/install-burp.sh
+    #   register: this
+    #   failed_when: this.rc != 0
     
 - name: Install commix
   tags: optional

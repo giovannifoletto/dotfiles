@@ -69,7 +69,7 @@
 - name: Install helm
   block:
     - name: Install helm from packages
-      ansible.builtin.dnf5:
+      ansible.builtin.dnf:
         name: helm
         state: present
       become: true
@@ -114,7 +114,7 @@
         dest: /etc/yum.repos.d/hashicorp.repo
     
     - name: Install terraform
-      ansible.builtin.dnf5:
+      ansible.builtin.dnf:
         name: 
           - terraform
           - vagrant

@@ -1,5 +1,5 @@
 - name: Install rsync
-  ansible.builtin.dnf5:
+  ansible.builtin.dnf:
     name: rsync
     state: present
   become: true

@@ -1,9 +1,8 @@
 - name: Install golang from official repository
-  ansible.builtin.dnf5:
+  ansible.builtin.dnf:
     name:
       - golang
       - rustup
-      - nodejs-npm
     state: present
   become: true
   become_method: sudo

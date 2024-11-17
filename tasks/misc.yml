@@ -1,6 +1,6 @@
 # Openconnect, openvpn, wireguard, google-chrome
-- name: Install miscellaneus packages (openvpn, wireguard, google-chrome)
-  ansible.builtin.dnf5:
+- name: Install miscellaneus packages
+  ansible.builtin.dnf:
     name:
       - openvpn
       - wireguard-tools
@@ -8,13 +8,14 @@
       - btrfs-assistant
       - curl
       - wget
+      - '@Multimedia'
     state: present
   become: true
   become_method: sudo
 
 - name: Optional tailscale
   tags: optional-tailscale
-  ansible.builtin.dnf5:
+  ansible.builtin.dnf:
     name:
       - tailscale
     state: present
@@ -38,45 +39,23 @@
       become_method: sudo
 
     - name: Install Packages
-      ansible.builtin.dnf5:
+      ansible.builtin.dnf:
         name: code
         state: latest
       become: true
       become_method: sudo
 
 - name: Install docker
+  tags: docker-installed
   block:
-    - name: Check that packages are not present
-      ansible.builtin.dnf5:
-        name:
-          - docker
-          - docker-client
-          - docker-client-latest
-          - docker-common
-          - docker-latest
-          - docker-latest-logrotate
-          - docker-logrotate
-          - docker-selinux
-          - docker-engine-selinux
-          - docker-engine
-          - dnf-plugins-core
-        state: present
+    - name: Get commodity script
+      ansible.builtin.get_url:
+        url: https://get.docker.com
+        dest: /tmp/get-docker.sh
+        mode: '0755'
+      
+    - name: Run commodity script
+      ansible.builtin.command: bash -c /tmp/get-docker.sh
       become: true
       become_method: sudo
 
-    - name: Install new repo
-      ansible.builtin.shell: "dnf-3 config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo"
-      become: true
-      become_method: sudo
-
-    - name: Install docker and its dependency
-      ansible.builtin.dnf5:
-        name:
-        - docker-ce
-        - docker-ce-cli
-        - containerd.io
-        - docker-buildx-plugin
-        - docker-compose-plugin
-        state: latest
-      become: true
-      become_method: sudo
