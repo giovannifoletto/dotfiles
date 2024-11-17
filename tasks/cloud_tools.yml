@@ -3,33 +3,33 @@
     - name: Get current tools' version
       ansible.builtin.get_url:
         url: https://dl.k8s.io/release/stable.txt
-      register: kubectl-version
+      register: kubectl_version 
     
     - name: Download kubectl
       ansible.builtin.get_url:
-        url: https://dl.k8s.io/release/{{ kubectl-version }}/bin/linux/amd64/kubectl
+        url: https://dl.k8s.io/release/{{ kubectl_version }}/bin/linux/amd64/kubectl
         dest: /tmp/kubectl
     
     - name: Validation
       ansible.builtin.get_url:
-        url: https://dl.k8s.io/release/{{ kubectl-version }}/bin/linux/amd64/kubectl.sha256
+        url: https://dl.k8s.io/release/{{ kubectl_version }}/bin/linux/amd64/kubectl.sha256
         dest: /tmp/kubectl.sha256
     
     - name: Read the sha256 file checksum
       ansible.builtin.slurp:
         src: /tmp/kubectl.sha256
-      register: kube-sha256-content
+      register: kube_sha256_content
       
     - name: Calculate sha256 of the file
       ansible.builtin.stat:
         path: /tmp/kubectl
         checksum_algorithm: sha256
-      register: kube-hash-check
+      register: kube_hash_check
     
     - name: Fail if checksum do not coincide
       ansible.builtin.fail:
-        msg: "Kubernetes checksum do not coicide. Failing."ù
-      when: st.stat.hash != {{ kube-sha256-content | json_query('.content') | b64decode }}
+        msg: "Kubernetes checksum do not coicide. Failing."
+      when: st.stat.hash != {{ kube_sha256_content | json_query('.content') | b64decode }}
     
     - name: Install kubectl
       ansible.builtin.file:
@@ -41,12 +41,12 @@
     
     - name: Get autocompletion
       ansible.builtin.command: kubectl completion zsh
-      register: zsh-completion
+      register: zsh_completion
     
     - name: Create completion file
       ansible.builtin.copy:
         dest: /home/{{ username }}/.kubernetes-completion.sh
-        content: '{{ zsh-completion | json_query(".content") | b64decode }}'
+        content: '{{ zsh_completion | json_query(".content") | b64decode }}'
     
     - name: Add source of the completion file to .zshrc
       ansible.builtin.lineinfile:
@@ -77,17 +77,17 @@
 
     - name: Get autocompletion
       ansible.builtin.command: helm completion zsh
-      register: helm-completion
+      register: helm_completion
     
     - name: Create completion file
       ansible.builtin.copy:
-        dest: /home/{{ username }}/.helm-completion.sh
-        content: '{{ helm-completion | json_query(".content") | b64decode }}'
+        dest: /home/{{ username }}/.helm_completion.sh
+        content: '{{ helm_completion | json_query(".content") | b64decode }}'
     
     - name: Add source of the completion file to .zshrc
       ansible.builtin.lineinfile:
         path: /home/{{ username }}/.zshrc
-        line: source ~/.helm-completion.sh
+        line: source ~/.helm_completion.sh
         state: present 
 
 - name: Install aws

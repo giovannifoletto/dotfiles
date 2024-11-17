@@ -61,7 +61,7 @@
 
 - name: Set new hostname
   ansible.builtin.hostname:
-    name: {{ hostaname }}
+    name: '{{ hostname }}'
 
 - name: Install gnome-tweaks
   ansible.builtin.dnf5:

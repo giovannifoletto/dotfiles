@@ -1,5 +1,5 @@
 - name: "Setup computer"
-  hosts: localhost
+  hosts: localhost 
   vars:
     username: giovannifoletto
     hostname: fedora

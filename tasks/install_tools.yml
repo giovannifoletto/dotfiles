@@ -63,11 +63,11 @@
 
     - name: Check for python version inside gdb
       ansible.builtin.command: gdb -nx -ex 'pi print(sys.version)' -ex quit
-      register: gdb-python-version
+      register: gdb_python_version 
 
     - name: Debug python version inside gdb
       ansible.builtin.debug:
-        var: gdb-python-version
+        var: gdb_python_version 
 
     - name: Get installation file
       ansible.builtin.get_url: 
@@ -217,7 +217,7 @@
       ansible.builtin.file:
         src: /opt/Stegsolve.jar
         dest: /usr/local/bin/stegsolve
-        owner: {{ username }}
+        owner: '{{ username }}'
         state: link
 
 # this is probably nonsense and will probably fail
