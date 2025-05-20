@@ -10,25 +10,34 @@
   become: true
   become_method: sudo
 
+- name: Check if ZIM is already present
+  ansible.builtin.stat:
+    path: "/home/{{ config.username }}/.zim"
+  register: check_zim
+
 - name: Install ZIM
   ansible.builtin.shell: "curl -fsSL https://raw.githubusercontent.com/zimfw/install/master/install.zsh | zsh"
-  tags: alreadyzim
+  when: not check_zim.stat.exists
 
 - name: Reconfigure ZIM
-  tags: alreadyzim
-  ansible.builtin.replace:
-    path: /home/{{ username }}/.zimrc
-    regexp: "zmodule asciiship"
-    replace: "zmodule prompt-pwd\nzmodule gitster"
+  when: not check_zim.stat.exists
+  block:
+    - ansible.builtin.replace:
+        path: /home/{{ config.username }}/.zimrc
+        regexp: "zmodule asciiship"
+        replace: "zmodule prompt-pwd"
+    - ansible.builtin.lineinfile:
+        line: "zmodule gitster"
+        state: present
 
 - name: Install new packages for ZIM
-  tags: alreadyzim
+  when: not check_zim.stat.exists
   ansible.builtin.shell: zimfw install
   args:
     executable: /bin/zsh
 
 - name: Update/Upgrade ZIM
-  tags: alreadyzim
+  when: not check_zim.stat.exists
   ansible.builtin.shell: zimfw upgrade
   args:
     executable: /bin/zsh
@@ -37,17 +46,17 @@
   become: true
   become_method: sudo
   ansible.builtin.user:
-    name: "{{ username }}"
+    name: "{{ config.username }}"
     shell: /bin/zsh
 
 # download font
 - name: Install Jetbrains Font
-  tags: todo
+  when: fonts is defined
   block:
     - name: Download font zip
       ansible.builtin.get_url:
         url: https://github.com/ryanoasis/nerd-fonts/releases/download/v3.2.1/Hack.zip
-        dest: /home/{{ username }}/Downloads/hacks.zip
+        dest: /home/{{ config.username }}/Downloads/hacks.zip
 
     # - name: Unzip the fonts
     #   ansible.builtin.unarchive:

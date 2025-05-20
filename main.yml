@@ -1,58 +1,72 @@
 - name: "Setup computer"
-  hosts: workstation 
-  vars:
-    username: giovannifoletto
-    hostname: fedora
-    # possible tags:
-    # - sync => add Synchronization functionality and start copying the home directory to another computer
-    # to test better, deactivated
-    # - migration => this is maybe better, organize all tasks inside this to make a backup and then sync locally or recover from backup
-    # - optional => install script/programs that are optional
-    # - optional-tailscale => install tailscale also
-    # - todo => not working, to exclude them from execution
-    # - docker-installed => to skip docker installation, if there is already a docker installation on the system
-    # during testing I added a lot of script, because some things do not work.
-    borg_username: borg
-    borg_server: 192.168.1.1
-    borg_repo_location: /data/{{ username }}-repo
-    apktool_version: 2.10.0
-    burp_version: 2024.9.5
-    jd_gui_version: 1.6.6
+  hosts: localhost
+  connection: local 
+  vars_files:
+    - config.yml
   tasks:
+    - name: Update/Upgrade
+      ansible.builtin.dnf:
+        name: "*"
+        state: latest
+      become: yes
+      become_method: sudo
+      when: update_all
 
-  - name: Update/Upgrade
-    ansible.builtin.dnf:
-      name: "*"
-      state: latest
-    become: yes
-    become_method: sudo
+    - name: Install things to make fedora usable
+      ansible.builtin.include_tasks: tasks/things_to_do_after_installing_fedora.yml
+      
+    - name: ZSH/ZIM installation
+      ansible.builtin.include_tasks: tasks/install_zim.yml
 
-  - name: Install things to make fedora usable
-    ansible.builtin.import_tasks: tasks/things_to_do_after_installing_fedora.yml
+    - name: Install misc software
+      ansible.builtin.include_tasks: tasks/misc.yml
+      when: misc_software
+
+    - name: Install repo from config
+      ansible.builtin.yum_repository:
+        name: "{{ item.name }}"
+        baseurl: "{{ item.url }}"
+        description: "{{ item.name }}"
+      loop: "{{ repo_to_add }}"
+      when: (repo_to_add | length) > 0
+      become: true
+      become_user: root
+
+    - name: Install softwares from config
+      ansible.builtin.dnf:
+        name: "{{ packages }}"
+        state: present
+      become: true
+      become_user: root
+
+    - name: Install code toolchain
+      ansible.builtin.include_tasks: tasks/install_toolchain.yml
     
-  - name: ZSH/ZIM installation
-    ansible.builtin.import_tasks: tasks/install_zim.yml
+    - name: Install from Github
+      ansible.builtin.include_tasks: tasks/download_from_link.yml
+      loop: "{{ download_from_link }}"
+      when: (download_from_link | length) > 0
+    
+    - name: Install kubernetes
+      ansible.builtin.include_tasks: tasks/kubectl.yml
 
-  - name: Install misc software
-    ansible.builtin.import_tasks: tasks/misc.yml
+    - name: Add configuration
+      ansible.builtin.lineinfile:
+        path: "{{ item.file }}"
+        line: "{{ item.line }}"
+      loop: "{{ files_add_lines }}"
 
-  - name: Install go and rust toolchain
-    ansible.builtin.import_tasks: tasks/install_toolchain.yml
-  
-  - name: Install security tools
-    ansible.builtin.import_tasks: tasks/install_tools.yml  
-  
-  - name: Install cloud tools
-    ansible.builtin.import_tasks: tasks/cloud_tools.yml
-  
-  - name: Setup SSH and GPG
-    ansible.builtin.import_tasks: tasks/crypto_setup.yml
-    tags: todo
+    # - name: Install security tools
+    #   ansible.builtin.include_tasks: tasks/install_tools.yml  
+    
+    # - name: Setup SSH and GPG
+    #   ansible.builtin.include_tasks: tasks/crypto_setup.yml
+    #   tags: todo
 
-  - name: Synchronization tasks
-    ansible.builtin.import_tasks: tasks/sync_tasks.yml
-    tags: sync
+    # - name: Synchronization tasks
+    #   ansible.builtin.include_tasks: tasks/sync_tasks.yml
+    #   tags: sync
 
-  - name: Setup borgbackup and borgmatic
-    ansible.builtin.import_tasks: tasks/borg_backup.yml
-    tags: sync
+    # - name: Setup borgbackup and borgmatic
+    #   ansible.builtin.include_tasks: tasks/borg_backup.yml
+    #   tags: sync

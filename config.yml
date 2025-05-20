@@ -1,0 +1,85 @@
+profile: sysadmin
+os_type: redhat
+os_name: fedora
+
+update_all: true
+fastest_mirror: true
+concurrent_download: 10
+misc_software: false
+gnome: false
+# Other possibile
+# gnome: true
+# resources: true
+# fonts: true
+
+config:
+  username: giovannifoletto
+  # hostname: fedora
+  # possible tags:
+  # - sync => add Synchronization functionality and start copying the home directory to another computer
+  # to test better, deactivated
+  # - migration => this is maybe better, organize all tasks inside this to make a backup and then sync locally or recover from backup
+  # - optional => install script/programs that are optional
+  # - optional-tailscale => install tailscale also
+  # - todo => not working, to exclude them from execution
+  # - docker-installed => to skip docker installation, if there is already a docker installation on the system
+  # during testing I added a lot of script, because some things do not work.
+  borg_username: borg
+  borg_server: 192.168.1.1
+  # borg_repo_location: /data/{{ config.username }}-repo
+  apktool_version: 2.10.0
+  burp_version: 2024.9.5
+  jd_gui_version: 1.6.6
+
+packages:
+  - git
+  - curl
+  - wget
+  - tar
+  - zip
+  - podman
+  - ansible
+  - skopeo
+  - vim
+  - golang
+  - rustup
+  - jq
+  - helm
+  - gh
+  - fzf
+  - "https://gitlab.com/gitlab-org/cli/-/releases/v1.57.0/downloads/glab_1.57.0_linux_amd64.rpm"
+  - python3-jmespath
+
+code_toolschains:
+  golang: true
+  rust: false
+
+cloud_tools:
+  kubectl: true
+
+download_from_link:
+  - name: minikube
+    url: https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+  - name: kind
+    url: https://kind.sigs.k8s.io/dl/v0.28.0/kind-linux-amd64
+  - name: glab
+    description: Gitlab CLI
+    url: "https://gitlab.com/gitlab-org/cli/-/releases/v1.57.0/downloads/glab_1.57.0_linux_amd64.rpm"
+
+repo_to_add:
+  - name: hashicorp
+    url: "https://rpm.releases.hashicorp.com/fedora/hashicorp.repo"
+  - name: opentofu
+    url: "https://packages.opentofu.org/opentofu/tofu/rpm_any/rpm_any/$basearch"
+  - name: githubcli
+    url: "https://cli.github.com/packages/rpm/gh-cli.repo"
+
+files_add_lines:
+  - file: "/home/{{ config.username }}/.zshrc"
+    line: "export PATH=/home/{{ config.username }}/.local/bin:$PATH"
+  - file: "/home/{{ config.username }}/.zshrc"
+    line: 'PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"'
+  - file: "/home/{{ config.username }}/.zshrc"
+    line: "source <(kubectl completion zsh)"
+  - file: "/home/{{ config.username }}/.zshrc"
+    line: "source <(helm completion zsh)"

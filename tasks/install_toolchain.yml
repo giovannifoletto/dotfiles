@@ -1,20 +1,21 @@
-- name: Install golang from official repository
-  ansible.builtin.dnf:
-    name:
-      - golang
-      - rustup
-    state: present
-  become: true
-  become_method: sudo
+---
+- name: Golang Toolchain
+  when: code_toolschains.golang
+  block:
+    - name: Make go/bin home directory
+      ansible.builtin.file:
+        path: "{{ lookup('env', 'HOME') }}/go"
+        state: directory
+        mode: '0755'
 
-- name: Make go/bin home directory
-  ansible.builtin.file:
-    path: "{{ lookup('env', 'HOME') }}/go"
-    state: directory
-    mode: '0755'
+    - name: Insert export GOPATH inside zsh
+      ansible.builtin.lineinfile:
+        path: "{{ lookup('env', 'HOME') }}/.zshrc"
+        line: export GOPATH=$HOME/go
+        state: present
 
-- name: Insert export GOPATH inside zsh
-  ansible.builtin.lineinfile:
-    path: /home/{{ username }}/.zshrc
-    line: export GOPATH=$HOME/go
-    state: present
+- name: Rust Toolchain
+  when: code_toolschains.rust
+  block:
+    - name: Install rust using Rustup
+      ansible.builtin.shell: rustup update

@@ -4,9 +4,10 @@
   ansible.builtin.lineinfile:
     path: /etc/dnf/dnf.conf
     state: present
-    line: max_parallel_downloads=10
+    line: "max_parallel_downloads={{ concurrent_download }}"
   become: true
   become_method: sudo
+  when: concurrent_download is defined
 
 - name: Change dnf configuration for 'fastermirror'
   ansible.builtin.lineinfile:
@@ -15,10 +16,12 @@
     line: fastestmirror=true
   become: true
   become_method: sudo
+  when: fastest_mirror is defined
 
 - name: Installing resources, sudo block
   become: true
   become_method: sudo
+  when: resources is defined
   block:
 #  - name: Enable the RPM Fusion repository
 #    ansible.builtin.dnf:
@@ -59,9 +62,10 @@
 # - name: Insall multimedia Group
 - name: Set new hostname
   ansible.builtin.hostname:
-    name: '{{ hostname }}'
+    name: '{{ config.hostname }}'
   become: true
   become_method: sudo
+  when: config.hostname is defined
 
 - name: Install gnome-tweaks
   ansible.builtin.dnf:
@@ -71,3 +75,4 @@
     state: present
   become: true
   become_method: sudo
+  when: gnome

@@ -1,0 +1,72 @@
+- name: Installing kubectl
+  when: cloud_tools.kubectl
+  block:
+    - name: Get current tools'version
+      ansible.builtin.get_url:
+        url: https://dl.k8s.io/release/stable.txt
+        dest: /tmp/kubectl_version
+
+    - name: Read current version
+      ansible.builtin.slurp:
+        src: /tmp/kubectl_version
+      register: kubectl_read_version 
+
+    - name: Read current version
+      ansible.builtin.set_fact:
+        kubectl_version: "{{ kubectl_read_version.content | b64decode }}"
+
+    - name: Download kubectl
+      ansible.builtin.get_url:
+        url: https://dl.k8s.io/release/{{ kubectl_version }}/bin/linux/amd64/kubectl
+        dest: /tmp/kubectl
+    
+    - name: Validation
+      ansible.builtin.get_url:
+        url: https://dl.k8s.io/release/{{ kubectl_version }}/bin/linux/amd64/kubectl.sha256
+        dest: /tmp/kubectl.sha256
+    
+    - name: Read the sha256 file checksum
+      ansible.builtin.slurp:
+        src: /tmp/kubectl.sha256
+      register: kube_sha256_content
+      
+    - name: Calculate sha256 of the file
+      ansible.builtin.stat:
+        path: /tmp/kubectl
+        checksum_algorithm: sha256
+      register: kube_hash_check
+
+    - name: Fail if checksum do not coincide
+      ansible.builtin.fail:
+        msg: "Kubernetes checksum do not coicide. Failing."
+      when: kube_hash_check.stat.checksum != (kube_sha256_content.content | b64decode)
+    
+    - name: Install kubectl
+      ansible.builtin.copy:
+        src: /tmp/kubectl
+        remote_src: true
+        dest: /usr/local/bin/kubectl
+        mode: '0755'
+      become: true
+      become_method: sudo
+
+- name: Download and install Krew
+  ansible.builtin.get_url:
+    url: "https://github.com/kubernetes-sigs/krew/releases/latest/download/krew-linux_amd64.tar.gz"
+    dest: /tmp/krew.tar.gz
+    mode: "0644"
+
+- name: Untar krew
+  ansible.builtin.unarchive:
+    src: /tmp/krew.tar.gz
+    dest: /tmp
+
+- name: Krew binary must be executable
+  ansible.builtin.file:
+    path: /tmp/krew-linux_amd64
+    mode: '0755'
+
+- name: Install krew
+  ansible.builtin.shell:
+    cmd: "/tmp/krew-linux_amd64 install krew"
+
